@@ -7,7 +7,16 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+
+/* TODO
+ *   reduce duplication in URL strings
+ *   make category not a global field
+ *   make download use session & newRequest*/
+
 
 public class NSFBIHCrawler extends CrawlerInterface {
 
