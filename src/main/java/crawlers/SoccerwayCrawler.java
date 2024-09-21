@@ -8,6 +8,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.lang.reflect.Array;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ public class SoccerwayCrawler extends CrawlerInterface {
         try {
             String home = match.select("td[class='team team-a']").text();
             String away = match.select("td[class='team team-b']").text();
-            String localTime = LocalTime.now().toString();
+            String localTime = LocalTime.now(Clock.systemUTC()).toString();
             if (match.attr("data-status").equalsIgnoreCase("played")) {
                 String[] Scores = match.select("span.extra_time_score").text().split("-");
                 String scoreHome = Scores[1].trim();
