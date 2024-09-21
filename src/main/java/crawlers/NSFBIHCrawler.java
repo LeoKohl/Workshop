@@ -80,8 +80,8 @@ public class NSFBIHCrawler extends CrawlerInterface {
                     .setHomeTeam(home)
                     .setAwayTeam(away)
                     .setCategory(CATEGORY)
-                    .setDate(date, dateFormat, timeZone)
-                    .setScore(score);
+                    .setDate(date, dateFormat, timeZone);
+//                    .setScore(score);
             FIXTURE_LIST.add(fixture);
         } catch (Exception e) {
             CrawlerInterface.debug("parseMatch", e.getMessage());
