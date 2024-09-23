@@ -7,12 +7,9 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.lang.reflect.Array;
 import java.time.Clock;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class SoccerwayCrawler extends CrawlerInterface {
@@ -71,8 +68,8 @@ public class SoccerwayCrawler extends CrawlerInterface {
                         .setHomeTeam(home)
                         .setAwayTeam(away)
                         .setCategory(CATEGORY)
-                        .setDate(date + " " + localTime, DATEFORMAT, TIMEZONE)
-                        .setScore(scoreHome + ":" + scoreAway);
+                        .setDate(date + " " + localTime, DATEFORMAT, TIMEZONE);
+//                        .setScore(scoreHome + ":" + scoreAway);
                 FIXTURE_LIST.add(fixture);
             } else {
                 String time = match.select("div[class='match-card match-hour']").text();
