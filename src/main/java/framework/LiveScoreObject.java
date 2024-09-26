@@ -13,13 +13,11 @@ public class LiveScoreObject extends FixtureObject {
     @Getter(AccessLevel.PUBLIC)
     final List<LiveEvent> liveEvents = new ArrayList<>();
 
-    void addLiveEvent(LiveEvent event) {
+    public void addLiveEvent(LiveEvent event) {
         liveEvents.add(event);
     }
 
-    void printEvents() {
-        liveEvents.forEach(liveEvent -> {
-            System.out.println("Event: " + liveEvent.toString());
-        });
+   public void printEvents() {
+        liveEvents.forEach(liveEvent -> System.out.println("Event: " + liveEvent.toString()));
     }
 }
