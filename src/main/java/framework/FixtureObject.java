@@ -24,7 +24,7 @@ public class FixtureObject {
     Date date;
 
     public FixtureObject(String homeTeam, String awayTeam, String category, String date, String dateFormat, String timeZone) throws ParseException {
-        this.setHomeTeam(homeTeam)
+               this.setHomeTeam(homeTeam)
                 .setAwayTeam(awayTeam)
                 .setCategory(category)
                 .setDate(date, dateFormat, timeZone);
