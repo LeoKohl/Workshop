@@ -101,20 +101,22 @@ public class BetclicCrawler extends CrawlerInterface {
     private static void getTeamComp(LiveScoreObject liveScoreObject, String url) {
         try {
             Document document = getDocument(url);
-            Elements teams = document.select("table[class='boxscore-tab']");
-            teams.forEach(team -> {
-                String teamName = team.select("div[class='boxscore-team-name'] > a").text();
-                Elements players = team.select("table[class='boxscore-tab'] tr[class='main-background-color'], [class='second-background-color']");
-                players.forEach(player -> {
-                    String firstName = player.select("span[class='first-name']").text();
-                    String lastName = player.select("span[class='last-name']").text();
-                    LiveEvent event = new LiveEvent()
-                            .setEventType(EventType.LINEUP)
-                            .setParam1(firstName + " " + lastName)
-                            .setParam2(teamName);
-                    liveScoreObject.addLiveEvent(event);
+            if (document != null) {
+                Elements teams = document.select("table[class='boxscore-tab']");
+                teams.forEach(team -> {
+                    String teamName = team.select("div[class='boxscore-team-name'] > a").text();
+                    Elements players = team.select("table[class='boxscore-tab'] tr[class='main-background-color'], [class='second-background-color']");
+                    players.forEach(player -> {
+                        String firstName = player.select("span[class='first-name']").text();
+                        String lastName = player.select("span[class='last-name']").text();
+                        LiveEvent event = new LiveEvent()
+                                .setEventType(EventType.LINEUP)
+                                .setParam1(firstName + " " + lastName)
+                                .setParam2(teamName);
+                        liveScoreObject.addLiveEvent(event);
+                    });
                 });
-            });
+            }
         } catch (Exception e) {
             debug("getTeamComp: ", e.getMessage());
         }
