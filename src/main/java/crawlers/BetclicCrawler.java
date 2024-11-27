@@ -14,10 +14,12 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.time.Clock;
-import java.time.LocalTime;
+import java.text.DateFormat;
+import java.time.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class BetclicCrawler extends CrawlerInterface {
@@ -26,25 +28,26 @@ public class BetclicCrawler extends CrawlerInterface {
 
     static final String CATEGORY = "Betclic.Élite";
 
-    static final List<LiveScoreObject> LIVE_SCORE_OBJECT_LIST = new ArrayList<>();
+    static final List<LiveScoreObject> FIXTURE_LIST = new ArrayList<>();
 
-    static final String TIMEZONE = "Europe/Paris";
-
-    static final String DATEFORMAT = "dd MMMM yyyy HH:mm";
+    static final DateFormat DF = DateFormat.getDateInstance(DateFormat.LONG, Locale.FRANCE);
 
     static final String API_URL = "https://www.lnb.fr/elite/wp-admin/admin-ajax.php";
 
     static final OkHttpClient CLIENT = new OkHttpClient();
-
-    //static String date;
 
     @Override
     public void downLoad() {
         try {
             Document document = getDocument(API_URL);
             if (document != null) {
-                System.out.println(document);
+                parseMatches(document);
             }
+            debug("Found Fixtures: ", FIXTURE_LIST.size());
+            FIXTURE_LIST.forEach(fixture -> {
+                debug(fixture.toString());
+                fixture.printEvents();
+            });
         } catch (Exception e) {
             debug("downLoad: ", e.getMessage());
         }
@@ -69,10 +72,11 @@ public class BetclicCrawler extends CrawlerInterface {
                    .setHomeTeam(homeTeam)
                    .setAwayTeam(awayTeam)
                    .setCategory(CATEGORY);
-           if (match.attr("btn1").equalsIgnoreCase("Game Center")) {
+           if (match.select("button").text().equalsIgnoreCase("Game Center")) {
                String url = match.select("div[class*='ticketing'] > a").attr("href");
-               String localTime = LocalTime.now(Clock.systemUTC()).toString();
-               liveScoreObject.setDate(date + " " + localTime, DATEFORMAT, TIMEZONE);
+               String time = LocalTime.now(Clock.systemUTC()).toString();
+               Date dateTime = DF.parse(date + " " + time);
+               liveScoreObject.setDate(dateTime);
                String scoreHome = match.select("div[class*='hour-score'] div:eq(0) > a").text();
                String scoreAway = match.select("div[class*='hour-score'] div:eq(1) > a").text();
                LiveEvent event = new LiveEvent()
@@ -81,11 +85,14 @@ public class BetclicCrawler extends CrawlerInterface {
                        .setParam2(scoreAway);
                liveScoreObject.addLiveEvent(event);
                getTeamComp(liveScoreObject, url);
-               LIVE_SCORE_OBJECT_LIST.add(liveScoreObject);
-           } else if (match.attr("btn1").equalsIgnoreCase("LIVE")) {
+               FIXTURE_LIST.add(liveScoreObject);
+           //} else if (match.select("button").text().equalsIgnoreCase("LIVE")) {
 
            } else {
-
+               String time = match.select("div[class*='hour-score']").text();
+               Date dateTime = DF.parse(date + " " + time);
+               liveScoreObject.setDate(dateTime);
+               FIXTURE_LIST.add(liveScoreObject);
            }
        } catch (Exception e) {
            debug("parseMatch: ", e.getMessage());
@@ -93,7 +100,7 @@ public class BetclicCrawler extends CrawlerInterface {
     }
     private static void getTeamComp(LiveScoreObject liveScoreObject, String url) {
         try {
-            Document document = Jsoup.connect(url).get();
+            Document document = getDocument(url);
             Elements teams = document.select("table[class='boxscore-tab']");
             teams.forEach(team -> {
                 String teamName = team.select("div[class='boxscore-team-name'] > a").text();
@@ -115,22 +122,26 @@ public class BetclicCrawler extends CrawlerInterface {
 
     private static Document getDocument(String url) {
         try {
-            RequestBody formBody = new FormBody.Builder()
-                    .add("action", "get_calendar_html")
-                    .add("season", "2024")
-                    .add("team", "all")
-                    .add("date", "all")
-                    .build();
-            Request request = new Request.Builder()
-                    .url(url)
-                    .post(formBody)
-                    .build();
-            Response response = CLIENT.newCall(request).execute();
-            String json = response.body().string();
-           //String json = Jsoup.connect(url).data("action", "get_calendar_html", "season", "2024", "team", "all", "date", "all").post().body().text();
-           JsonNode jsonNode = MAPPER.readTree(json);
-           String html = jsonNode.get("html").asText();
-           return Jsoup.parse(html);
+            if (url.equalsIgnoreCase("https://www.lnb.fr/elite/wp-admin/admin-ajax.php")) {
+                RequestBody formBody = new FormBody.Builder()
+                        .add("action", "get_calendar_html")
+                        .add("season", "2024")
+                        .add("team", "all")
+                        .add("date", "all")
+                        .add("screen_size", "1376")
+                        .build();
+                Request request = new Request.Builder()
+                        .url(url)
+                        .post(formBody)
+                        .build();
+                Response response = CLIENT.newCall(request).execute();
+                String json = response.body().string();
+                JsonNode jsonNode = MAPPER.readTree(json);
+                String html = jsonNode.get("html").asText();
+                return Jsoup.parse(html);
+            } else {
+                return Jsoup.connect(url).get();
+            }
         } catch (Exception e) {
             debug("getDocument: ", e.getMessage());
         }
