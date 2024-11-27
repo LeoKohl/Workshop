@@ -11,7 +11,6 @@ import org.jsoup.select.Elements;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TimeZone;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class EliteserienCrawler extends CrawlerInterface {
