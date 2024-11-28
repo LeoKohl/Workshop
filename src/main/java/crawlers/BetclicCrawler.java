@@ -15,11 +15,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.*;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class BetclicCrawler extends CrawlerInterface {
@@ -30,11 +28,13 @@ public class BetclicCrawler extends CrawlerInterface {
 
     static final List<LiveScoreObject> FIXTURE_LIST = new ArrayList<>();
 
-    static final DateFormat DF = DateFormat.getDateInstance(DateFormat.LONG, Locale.FRANCE);
+    static final DateFormat DF = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT, Locale.FRANCE);
 
     static final String API_URL = "https://www.lnb.fr/elite/wp-admin/admin-ajax.php";
 
     static final OkHttpClient CLIENT = new OkHttpClient();
+
+    static final String TIMEZONE = "Europe/Paris";
 
     @Override
     public void downLoad() {
