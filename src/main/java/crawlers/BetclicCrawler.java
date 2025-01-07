@@ -79,13 +79,13 @@ public class BetclicCrawler extends CrawlerInterface {
         try {
             String homeTeam = match.select("div[class*='home-team'] > a").text();
             String awayTeam = match.select("div[class*='road-team'] > a").text();
+            String localTime = LocalTime.now(ZoneId.of("Europe/Paris")).toString();
             LiveScoreObject liveScoreObject = (LiveScoreObject) new LiveScoreObject()
                     .setHomeTeam(homeTeam)
                     .setAwayTeam(awayTeam)
                     .setCategory(CATEGORY);
             if (match.select("button").text().equalsIgnoreCase("Game Center")) {
-                String time = LocalTime.now(ZoneId.of("Europe/Paris")).toString();
-                Date dateTime = DF.parse(date + " " + time);
+                Date dateTime = DF.parse(date + " " + localTime);
                 liveScoreObject.setDate(dateTime);
                 String scoreHome = match.select("div[class*='hour-score'] div:eq(0) > a").text();
                 String scoreAway = match.select("div[class*='hour-score'] div:eq(1) > a").text();
@@ -96,25 +96,30 @@ public class BetclicCrawler extends CrawlerInterface {
                 liveScoreObject.addLiveEvent(event);
                 FIXTURE_LIST.add(liveScoreObject);
             } else if (match.select("button").text().equalsIgnoreCase("LIVE")) {
-                String url = match.select("div[class*='ticketing'] > a").attr("href");
+                Date dateTime = DF.parse(date + " " + localTime);
+                liveScoreObject.setDate(dateTime);
+                /*String url = match.select("div[class*='ticketing'] > a").attr("href");
                 String gameId = getGameId(url);
                 RequestBody formBody = new FormBody.Builder()
                         .add("action", "get_slider_section_games_home_page")
                         .add("game_id", gameId)
                         .build();
                 Document document = getDocument(formBody);
-                if (document != null) {
-                    String bs_url = BASE_LIVE_URL + document.select("div[class='sw-sub-tabs'] a:eg(0)").attr("href").replace("\\?%7Ew=f%7E", "");
-                    String pbp_url = BASE_LIVE_URL +  document.select("div[class='sw-sub-tabs'] a:eg(1)").attr("href").replace("\\?%7Ew=f%7E", "");
+                if (document != null) {*/
+//                    String bs_url = BASE_LIVE_URL + document.select("div[class='sw-sub-tabs'] a:eq(0)").attr("href").replace("\\?%7Ew=f%7E", "")
+//                    String pbp_url = BASE_LIVE_URL +  document.select("div[class='sw-sub-tabs'] a:eq(1)").attr("href").replace("\\?%7Ew=f%7E", "");
+                    String bs_url = "https://eapi.web.prod.cloud.atriumsports.com/v1/embed/6/fixture_detail?state=eJwljLENwzAMBFcxWIeFKNIOM0AGyAakbAIGXFmqEmT3mEj3dzj8Bzo8JmjmFEozUphjKVvg3VVxE6mNV5mdGG4THBnHic9X0jupDxt7H3vrqSJVJQsSLsi12v_Nmgcu11KWhVdW-P4Az54gVA";
+                    String pbp_url = "https://eapi.web.prod.cloud.atriumsports.com/v1/embed/6/fixture_detail?state=eJwlzLENg0AMheFVTq7j4nw2xAyQAdjAPnBFcSJdInZPLLrvl57eF96wFOjmFEoTUphjrXvg01VxF2mdN5mcGB4FjhzHia8165M1fKQj3ciChCtya3bfWPfA-S9lmXljhesHuOodSw";
                     JsonNode bs = getJson(bs_url);
                     JsonNode pbp = getJson(pbp_url);
                     List<JsonNode> periods = pbp.at("/data/pbp").findParents("labels");
                     String homeId = pbp.at("/data/fixture/competitors/0/entityId").asText();
                     String awayId = pbp.at("/data/fixture/competitors/1/entityId").asText();
-                    parsePeriod(pbp, liveScoreObject, periods, homeId,awayId);
                     parseScoreChange(liveScoreObject, periods, homeId, awayId);
+                    parsePeriod(pbp, liveScoreObject, periods, homeId,awayId);
                     parseTeams(bs, liveScoreObject, homeTeam, awayTeam);
-                }
+                    FIXTURE_LIST.add(liveScoreObject);
+                //}
             } else {
                 String time = match.select("div[class*='hour-score']").text();
                 Date dateTime = DF.parse(date + " " + time);
@@ -129,16 +134,11 @@ public class BetclicCrawler extends CrawlerInterface {
     private static void parseScoreChange(LiveScoreObject liveScoreObject, List<JsonNode> periods, String homeId, String awayId) {
         try {
             JsonNode currentPeriod = periods.getLast();
-            List<JsonNode> events = currentPeriod.get("events").findParents("success");
-            events.forEach(event -> {
-                if (!event.get("success").asBoolean()) {
-                    events.remove(event);
-                }
-            });
-            JsonNode sce = events.getLast();
-            String homeScore = sce.at("/scores/" + homeId).asText();
-            String awayScore = sce.at("/scores/" + awayId).asText();
-            String goalscorer = sce.get("name").asText();
+            List<JsonNode> events = currentPeriod.get("events").findParents("success").reversed();
+            Optional<JsonNode> sce = events.stream().filter(c -> c.get("success").asBoolean()).findFirst();
+            String homeScore = sce.get().at("/scores/" + homeId).asText();
+            String awayScore = sce.get().at("/scores/" + awayId).asText();
+            String goalscorer = sce.get().get("name").asText();
             LiveEvent scoreChange = new LiveEvent()
                     .setEventType(EventType.SCORECHANGE)
                     .setParam1(homeScore)
@@ -153,37 +153,40 @@ public class BetclicCrawler extends CrawlerInterface {
     private static void parsePeriod(JsonNode pbp, LiveScoreObject liveScoreObject, List<JsonNode> periods, String homeId, String awayId) {
         try {
             JsonNode currentPeriod = periods.getLast();
-            String periodLabel = currentPeriod.at("/labels/shortlabel").asText();
+            String periodLabel = currentPeriod.at("/labels/shortLabel").asText();
             LiveEvent period = new LiveEvent();
             switch (periodLabel) {
                 case "Q4":
                     period
                             .setEventType(EventType.CURRENT_PERIOD)
                             .setParam1(Period.FOURTH_PERIOD.name());
+                    liveScoreObject.addLiveEvent(period);
                     parsePeriodScore(pbp, liveScoreObject, periodLabel, homeId, awayId);
                     break;
                 case "Q3":
                     period
                             .setEventType(EventType.CURRENT_PERIOD)
                             .setParam1(Period.THIRD_PERIOD.name());
+                    liveScoreObject.addLiveEvent(period);
                     parsePeriodScore(pbp, liveScoreObject, periodLabel, homeId, awayId);
                     break;
                 case "Q2":
                     period
                             .setEventType(EventType.CURRENT_PERIOD)
                             .setParam1(Period.SECOND_PERIOD.name());
+                    liveScoreObject.addLiveEvent(period);
                     parsePeriodScore(pbp, liveScoreObject, periodLabel, homeId, awayId);
                     break;
                 case "Q1":
                     period
                             .setEventType(EventType.CURRENT_PERIOD)
                             .setParam1(Period.FIRST_PERIOD.name());
+                    liveScoreObject.addLiveEvent(period);
                     parsePeriodScore(pbp, liveScoreObject, periodLabel, homeId, awayId);
                     break;
                 default:
                     break;
             }
-            liveScoreObject.addLiveEvent(period);
         } catch (Exception e) {
             debug("parsePeriod: ", e.getMessage());
         }
@@ -208,7 +211,7 @@ public class BetclicCrawler extends CrawlerInterface {
                     awayScore = pbp.at("/data/periodData/teamScores/" + awayId +"/2/score").asText();
                     LiveEvent periodScore3 = new LiveEvent()
                             .setEventType(EventType.PERIOD_SCORE)
-                            .setParam1(Period.FOURTH_PERIOD.name())
+                            .setParam1(Period.THIRD_PERIOD.name())
                             .setParam2(homeScore)
                             .setParam3(awayScore);
                     liveScoreObject.addLiveEvent(periodScore3);
@@ -217,7 +220,7 @@ public class BetclicCrawler extends CrawlerInterface {
                     awayScore = pbp.at("/data/periodData/teamScores/" + awayId +"/1/score").asText();
                     LiveEvent periodScore2 = new LiveEvent()
                             .setEventType(EventType.PERIOD_SCORE)
-                            .setParam1(Period.FOURTH_PERIOD.name())
+                            .setParam1(Period.SECOND_PERIOD.name())
                             .setParam2(homeScore)
                             .setParam3(awayScore);
                     liveScoreObject.addLiveEvent(periodScore2);
@@ -226,7 +229,7 @@ public class BetclicCrawler extends CrawlerInterface {
                     awayScore = pbp.at("/data/periodData/teamScores/" + awayId +"/0/score").asText();
                     LiveEvent periodScore1 = new LiveEvent()
                             .setEventType(EventType.PERIOD_SCORE)
-                            .setParam1(Period.FOURTH_PERIOD.name())
+                            .setParam1(Period.FIRST_PERIOD.name())
                             .setParam2(homeScore)
                             .setParam3(awayScore);
                     liveScoreObject.addLiveEvent(periodScore1);
@@ -243,7 +246,9 @@ public class BetclicCrawler extends CrawlerInterface {
         try {
             Pattern pattern = Pattern.compile("id=(\\d+)");
             Matcher matcher = pattern.matcher(url);
-            return matcher.group(1);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
         } catch (Exception e) {
             debug("getGameId: ", e.getMessage());
         } return null;
@@ -299,7 +304,7 @@ public class BetclicCrawler extends CrawlerInterface {
 
     private static JsonNode getJson(String url) {
         try {
-            String json = Jsoup.connect(url).ignoreContentType(true).get().body().toString();
+            String json = Jsoup.connect(url).ignoreContentType(true).get().body().text();
             return MAPPER.readTree(json);
         } catch (Exception e) {
             debug("getJsonNode: ", e.getMessage());
@@ -307,3 +312,4 @@ public class BetclicCrawler extends CrawlerInterface {
         return null;
     }
 }
+
