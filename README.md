@@ -1,2 +1,2 @@
 # Workshop
-Workshop for Job
+Workshop WebCrawler for Sportdata with Java
